@@ -92,7 +92,7 @@ def addStoryboardDictToFile(dict, file):
 # -------------------------------    Localize String --------------------------------------------
 
 print("\n\n\n\n\nLocalize Strings...")
-for name in ['InfoPlist']:
+for name in ['Localizable', 'InfoPlist']:
     baseDict = getFileAsDict(getBasePath(name))
     for lang in languages:
         print(f"\nLang: <{lang}>:")

@@ -134,7 +134,7 @@ for sb in list(Path('..').rglob('*.intentdefinition')):
         shortcutsDict = getFileAsDict(file = basePath.replace('en.lproj', f'{lang}.lproj'))    # old strings from file
         shortcutsNewDict = {}                                                                # dictionary with new strings
         for key, value in baseDict.items():
-            #if comment in shortcutsDict.keys(): continue                                    # skip if string is already localized
+            if comment in shortcutsDict.keys(): continue                                    # skip if string is already localized
                         
             #   safe translate quoted strings
             result = ''

@@ -147,7 +147,7 @@ for sb in list(Path('..').rglob('*.intentdefinition')):
             #   save
             shortcutsNewDict[key] = result
             print("\t"+value+" -> "+shortcutsNewDict[key])
-        with open(basePath.replace('en.lproj', f'{lang}.lproj'), 'w'): pass
+        #with open(basePath.replace('en.lproj', f'{lang}.lproj'), 'w'): pass
         addStringsDictToFile(dict = shortcutsNewDict, file = basePath.replace('en.lproj', f'{lang}.lproj'))
 
 print("\n\n\tFINISH!\n\n")

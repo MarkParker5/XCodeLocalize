@@ -11,6 +11,12 @@ languages = ['ru', 'es', 'zh-Hans', 'zh-Hant', 'th', 'ko', 'ja', 'fr', 'de', 'it
 
 #    some language codes are different in xcode and in google translate
 translatorLangCodes = {'zh-Hans': 'zh-CN', 'zh-Hant': 'zh-TW', 'pt-BR': 'pt'}
+
+projectName  = 'CC'
+stringsFiles = ['Localizable', 'InfoPlist']     # names of strings files
+
+def getFilePath(lang, name = 'Localizable'):
+    return f'../{projectName}/{lang}.lproj/{name}.strings'
 # -------------------------------    /Settings ----------------------------------------------
 
 
@@ -21,25 +27,25 @@ def translate(text, lang):
 def clearLocalize():
     for lang in languages:
         #    clear Localizable.strings
-        with open(getFilePath(lang), 'w') as strings:
-            strings.write('')
+        for name in stringsFiles:
+            with open(getFilePath(lang, name), 'w') as f:
+                f.write('')
 # -------------------------------    /Functions ----------------------------------------------
 
 
-# -------------------------------    Strings Functions -------------------------------------
+# -------------------------------    Files Functions    -------------------------------------
 def getBasePath(name = 'Localizable'):
-    base = f'../PeFi/Localization/Base.lproj/{name}.strings'
-    en = f'../PeFi/Localization/en.lproj/{name}.strings'
+    base = getFilePath('Base', name)
+    en   = getFilePath('en', name)
     return base if os.path.exists(base) else en
-
-def getFilePath(lang, name = 'Localizable'):
-    return f'../PeFi/Localization/{lang}.lproj/{name}.strings'
 
 # read language strings file as dictionary {key: value}
 def getFileAsDict(file):
     langDict = {}
-    with open(file, 'r') as strings:
-        for line in strings.read().split(';'):
+    with open(file, 'r') as f:
+        file = f.read()
+        #lines = re.sub(r'^\/\/[^\n\r]+[\n\r]', '', file).split(';') # remove comments
+        for line in file.split(';'):
             try: key, value = [text.strip() for text in line.replace(';', '').replace('"', '').replace('%@', '_ARG_').split('=')]
             except: continue
             langDict[key] = value
@@ -89,10 +95,10 @@ def addStoryboardDictToFile(dict, file):
 # clearLocalize()
 # exit()
 
-# -------------------------------    Localize String --------------------------------------------
+# -------------------------------    Localize Strings Files ------------------------------------
 
 print("\n\n\n\n\nLocalize Strings...")
-for name in ['Localizable', 'InfoPlist']:
+for name in stringsFiles:
     baseDict = getFileAsDict(getBasePath(name))
     for lang in languages:
         print(f"\nLang: <{lang}>:")
@@ -115,14 +121,14 @@ for sb in list(Path('..').rglob('*.storyboard')):
     for lang in languages:
         print(f"\nLang: <{lang}>:")
         storyboardDict = getStoryboardAsDict(file = basePath.replace('en.lproj', f'{lang}.lproj'))    # old strings from file
-        storyboardNewDict = {}                                                                # dictionary with new strings
+        storyboardNewDict = {}                                                                        # dictionary with new strings
         for comment, (key, value) in baseDict.items():
-            if comment in storyboardDict.keys(): continue                                    # skip if string is already localized
+            if comment in storyboardDict.keys(): continue                                             # skip if string is already localized
             storyboardNewDict[comment] = [key, translate(text = value, lang = lang)]
             print("\t"+value+" -> "+storyboardNewDict[comment][1])
         addStoryboardDictToFile(dict = storyboardNewDict, file = basePath.replace('en.lproj', f'{lang}.lproj'))
 
-# -------------------------------    Find and Localize Shortcuts -----------------------------
+# -------------------------------    Find and Localize Shortcuts ---------------------------------
 
 print("\n\n\n\n\nLocalize Shortcuts...")
 for sb in list(Path('..').rglob('*.intentdefinition')):
@@ -130,11 +136,12 @@ for sb in list(Path('..').rglob('*.intentdefinition')):
     baseDict = getFileAsDict(file = basePath)
     print('\n\n', basePath)
     for lang in languages:
+        with open(basePath.replace('en.lproj', f'{lang}.lproj'), 'w'): pass                    # clear file before localisation
         print(f"\nLang: <{lang}>:")
         shortcutsDict = getFileAsDict(file = basePath.replace('en.lproj', f'{lang}.lproj'))    # old strings from file
-        shortcutsNewDict = {}                                                                # dictionary with new strings
+        shortcutsNewDict = {}                                                                  # dictionary with new strings
         for key, value in baseDict.items():
-            if key in shortcutsDict.keys(): continue                                    # skip if string is already localized
+            if key in shortcutsDict.keys(): continue                                           # skip if string is already localized
                         
             #   safe translate quoted strings
             result = ''
@@ -147,7 +154,6 @@ for sb in list(Path('..').rglob('*.intentdefinition')):
             #   save
             shortcutsNewDict[key] = result
             print("\t"+value+" -> "+shortcutsNewDict[key])
-        #with open(basePath.replace('en.lproj', f'{lang}.lproj'), 'w'): pass
         addStringsDictToFile(dict = shortcutsNewDict, file = basePath.replace('en.lproj', f'{lang}.lproj'))
 
 print("\n\n\tFINISH!\n\n")

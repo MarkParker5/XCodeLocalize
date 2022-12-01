@@ -1,1 +1,1 @@
-python3 -m pip install mtranslate
+python3 -m pip install -r requirements.txt

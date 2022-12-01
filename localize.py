@@ -1,159 +1,102 @@
 import os
-import mtranslate
 from pathlib import Path
-import re
+from pprint import pprint
+from enum import IntEnum
+
+from Strings import FileGroup, StringsFile, String
+from Translator import Translator
+
+
+# DONE: parse using regex
+# DONE: find all .strings, .storyboard, .intentdefinition files via glob
+# DONE: get languages from project file ?
+
+ # TODO: safe translate quoted strings
+# result = ''
+# if m := re.search(r'‘(.+?)’', value):
+#     quoted = f'‘{m.group(1)}’'
+#     value = value.replace(quoted, '_QUOTED_')
+#     result = translate(text = value, lang = lang).replace('_QUOTED_', quoted)
+# else:
+#     result = translate(text = value, lang = lang)
+
+# TODO: setttings from command line
+# TODO: readme
+
+class LogLevel(IntEnum):
+    info = 0
+    group = 1
+    file = 2
+    string = 3
+
+# ---------- Settings ----------
+
+base_language: str = 'en'
+override: bool = True # False
+log_level: LogLevel = LogLevel.string
 
 os.system('clear')
 
-# -------------------------------    Settings -----------------------------------------------
-#    XCode supported languages codes
-languages = ['ru', 'es', 'zh-Hans', 'zh-Hant', 'th', 'ko', 'ja', 'fr', 'de', 'it', 'nl', 'tr', 'vi', 'hi', 'pt-BR', 'ar']
+# ---------- Search for files ----------
 
-#    some language codes are different in xcode and in google translate
-translatorLangCodes = {'zh-Hans': 'zh-CN', 'zh-Hant': 'zh-TW', 'pt-BR': 'pt'}
+files: dict[FileGroup, dict[str, StringsFile]] = {}
 
-projectName  = 'CC'
-stringsFiles = ['Localizable', 'InfoPlist']     # names of strings files
+for path in Path('.').rglob('*.lproj/*.strings'):
+    directory = path.parent.parent
+    language = path.parent.stem.lower()
+    filename = path.stem
+    
+    file_group = FileGroup(str(directory), str(filename))
+    
+    if not files.get(file_group):
+        files[file_group] = {}
 
-def getFilePath(lang, name = 'Localizable'):
-    return f'../{projectName}/{lang}.lproj/{name}.strings'
-# -------------------------------    /Settings ----------------------------------------------
+    files[file_group][language] = StringsFile(path)
 
+# print('Found files:', end = ' ')
+# pprint(files)
 
-# -------------------------------    Functions ----------------------------------------------
-def translate(text, lang):
-    return mtranslate.translate(text, translatorLangCodes.get(lang) or lang, 'en')
+# ---------- Translate files ----------
 
-def clearLocalize():
-    for lang in languages:
-        #    clear Localizable.strings
-        for name in stringsFiles:
-            with open(getFilePath(lang, name), 'w') as f:
-                f.write('')
-# -------------------------------    /Functions ----------------------------------------------
+print('Translating...')
 
+for file_group, languages in files.items():
+    base = languages.get('base') or languages.get(base_language)
 
-# -------------------------------    Files Functions    -------------------------------------
-def getBasePath(name = 'Localizable'):
-    base = getFilePath('Base', name)
-    en   = getFilePath('en', name)
-    return base if os.path.exists(base) else en
+    if not base:
+        print(f'No base language for {file_group}')
+        continue
 
-# read language strings file as dictionary {key: value}
-def getFileAsDict(file):
-    langDict = {}
-    with open(file, 'r') as f:
-        file = f.read()
-        #lines = re.sub(r'^\/\/[^\n\r]+[\n\r]', '', file).split(';') # remove comments
-        for line in file.split(';'):
-            try: key, value = [text.strip() for text in line.replace(';', '').replace('"', '').replace('%@', '_ARG_').split('=')]
-            except: continue
-            langDict[key] = value
-    return langDict
+    try:
+        base.read()
+    except UnicodeDecodeError:
+        print(f'Error reading base file {base.path}')
+        continue
 
-# save dictionary as strings file
-def addStringsDictToFile(dict, file):
-    string = ''
-    for key, value in dict.items():
-        string += f'"{key}" = "{value}";\n'
-    with open(file, 'a') as strings:
-        strings.write(string.replace('_ARG_', '%@').replace('$ {','${'))
-# -------------------------------    /Strings Functions -------------------------------------
+    if log_level >= LogLevel.group:
+        print(f'Starting {file_group} with {len(base.strings)} strings')
 
+    for language, strings_file in languages.items():
+        translator = Translator(target_lang = language, origin_lang = base_language)    
+        
+        try:
+            strings_file.read()
+        except UnicodeDecodeError:
+            print(f'Error reading {strings_file.path}')
+            continue
 
-# -------------------------------    Storyboard Functions -------------------------------------
-# read storyboard strings file as dictionary {"/*comment*/": {key: value}}
-def getStoryboardAsDict(file):
-    storyboardDict = {}
-    if not os.path.exists(file): return {}
-    with open(file, 'r') as strings:
-        lines = strings.readlines()
-        comment = ''
-        for line in lines:
-            # find /* comment */
-            if '/*' in line and '*/' in line:
-                comment = line
-                continue
-            # find "key" = "value"; for last comment
-            try:
-                key, value = [text.strip() for text in line.replace(';', '').replace('"', '').replace('\n', '').split('=')]
-                storyboardDict[comment] = [key, value]
-            except: pass
-    return storyboardDict
+        if log_level >= LogLevel.file:
+            print(f'    {file_group}.{language} {strings_file}')
 
-# save storyboards dictionary as Main.strings file
-def addStoryboardDictToFile(dict, file):
-    if not os.path.exists(file): return
-    string = ''
-    for comment, (key, value) in dict.items():
-        string += f'{comment}"{key}" = "{value}";\n\n'
-    with open(file, 'a') as strings:
-        strings.write(string)
-
-# -------------------------------    /Storyboard Functions -------------------------------------
-
-# clearLocalize()
-# exit()
-
-# -------------------------------    Localize Strings Files ------------------------------------
-
-print("\n\n\n\n\nLocalize Strings...")
-for name in stringsFiles:
-    baseDict = getFileAsDict(getBasePath(name))
-    for lang in languages:
-        print(f"\nLang: <{lang}>:")
-        langDict = getFileAsDict(file = getFilePath(lang, name))    # old strings from file
-        langNewDict = {}                                    # dictionary with new strings
-        for key, value in baseDict.items():
-            if key in langDict.keys(): continue                # skip if string is already localized
-            langNewDict[key] = translate(text = value, lang = lang).replace("\"", "\\\"")
-            print("\t"+key+" -> "+langNewDict[key])
-        addStringsDictToFile(dict = langNewDict, file = getFilePath(lang, name))
-
-
-# -------------------------------    Find and Localize Storyboards -----------------------------
-
-print("\n\n\n\n\nLocalize Storyboards...")
-for sb in list(Path('..').rglob('*.storyboard')):
-    basePath = str(sb).replace('.storyboard', '.strings').replace('Base.lproj', 'en.lproj')
-    baseDict = getStoryboardAsDict(file = basePath)
-    print('\n\n', basePath)
-    for lang in languages:
-        print(f"\nLang: <{lang}>:")
-        storyboardDict = getStoryboardAsDict(file = basePath.replace('en.lproj', f'{lang}.lproj'))    # old strings from file
-        storyboardNewDict = {}                                                                        # dictionary with new strings
-        for comment, (key, value) in baseDict.items():
-            if comment in storyboardDict.keys(): continue                                             # skip if string is already localized
-            storyboardNewDict[comment] = [key, translate(text = value, lang = lang)]
-            print("\t"+value+" -> "+storyboardNewDict[comment][1])
-        addStoryboardDictToFile(dict = storyboardNewDict, file = basePath.replace('en.lproj', f'{lang}.lproj'))
-
-# -------------------------------    Find and Localize Shortcuts ---------------------------------
-
-print("\n\n\n\n\nLocalize Shortcuts...")
-for sb in list(Path('..').rglob('*.intentdefinition')):
-    basePath = str(sb).replace('.intentdefinition', '.strings').replace('Base.lproj', 'en.lproj')
-    baseDict = getFileAsDict(file = basePath)
-    print('\n\n', basePath)
-    for lang in languages:
-        with open(basePath.replace('en.lproj', f'{lang}.lproj'), 'w'): pass                    # clear file before localisation
-        print(f"\nLang: <{lang}>:")
-        shortcutsDict = getFileAsDict(file = basePath.replace('en.lproj', f'{lang}.lproj'))    # old strings from file
-        shortcutsNewDict = {}                                                                  # dictionary with new strings
-        for key, value in baseDict.items():
-            if key in shortcutsDict.keys(): continue                                           # skip if string is already localized
-                        
-            #   safe translate quoted strings
-            result = ''
-            if m := re.search(r'‘(.+?)’', value):
-                quoted = f'‘{m.group(1)}’'
-                value = value.replace(quoted, '_QUOTED_')
-                result = translate(text = value, lang = lang).replace('_QUOTED_', quoted)
-            else:
-                result = translate(text = value, lang = lang)
-            #   save
-            shortcutsNewDict[key] = result
-            print("\t"+value+" -> "+shortcutsNewDict[key])
-        addStringsDictToFile(dict = shortcutsNewDict, file = basePath.replace('en.lproj', f'{lang}.lproj'))
-
-print("\n\n\tFINISH!\n\n")
+        for base_string in base.strings.values():
+            if override or not base_string.key in strings_file.strings:
+                new_string = String(
+                    key = base_string.key,
+                    value = translator.translate(base_string.value),
+                    comment = base_string.comment
+                )
+                strings_file.strings[base_string.key] = new_string
+                if log_level >= LogLevel.string:
+                    print(f'        {base_string.key} = {new_string.value}')
+        
+        strings_file.save()

@@ -21,12 +21,11 @@ class FileGroup:
     def __repr__(self):
         return f'{self.directory}\{self.filename}'
 
-
 @dataclass
 class String:
     key: str
     value: str
-    comment: str = None
+    comment: str | None = None
 
 class StringsFile:
 
@@ -43,7 +42,7 @@ class StringsFile:
         else:
             return f'<StringsFile []>'
 
-    def read(self) -> dict[str, str]:
+    def read(self):
         with open(self.path, 'r') as f:
             file = f.read().replace('%@', '_ARG_')
 

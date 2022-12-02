@@ -1,7 +1,5 @@
-from enum import Enum
-from dataclasses import dataclass
-import os
 from pathlib import Path
+from typing import Callable
 
 import typer
 from rich import print
@@ -11,59 +9,14 @@ from rich.console import Console
 
 from Strings import FileGroup, StringsFile, String
 from Translator import Translator
+from Settings import Settings, LogLevel, SearchResult, Languages
 
-
-# DONE: parse using regex
-# DONE: find all .strings, .storyboard, .intentdefinition files via glob
-# DONE: get languages from project file ?
-
-# DONE: setttings from command line
-# DONE: progress and colors
-
-# TODO: readme
-# TODO: safe translate quoted strings
-# result = ''
-# if m := re.search(r'‘(.+?)’', value):
-#     quoted = f'‘{m.group(1)}’'
-#     value = value.replace(quoted, '_QUOTED_')
-#     result = translate(text = value, lang = lang).replace('_QUOTED_', quoted)
-# else:
-#     result = translate(text = value, lang = lang)
-
-# ---------- Settings ----------
-
-class LogLevel(str, Enum):
-    progress = 'progress'
-    errors = 'errors'
-    group = 'group'
-    string = 'string'
-    
-    @property
-    def int_value(self) -> int:
-        return list(LogLevel).index(self)
-    
-    def __ge__(self, other):
-        return self.int_value >= other.int_value
-
-@dataclass
-class Settings:
-    base_language: str = 'en'
-    override: bool = False
-
-    files: list[str] = None # all
-    keys: list[str] = None # all
-    languages: list[str] = None # all
-
-    log_level: LogLevel = LogLevel.string
-
-Languages = dict[str, StringsFile]
-SearchResult = dict[FileGroup, Languages]
 
 # ---------- Global ----------
 
 settings: Settings
 progress: Progress
-update_progress: callable
+update_progress: Callable
 
 # ---------- Logging ----------
 

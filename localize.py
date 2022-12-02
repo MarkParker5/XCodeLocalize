@@ -22,6 +22,9 @@ from Translator import Translator
 
 # TODO: setttings from command line
 # TODO: readme
+# TODO: progress and colors
+
+# ---------- Settings ----------
 
 class LogLevel(IntEnum):
     info = 0
@@ -29,11 +32,15 @@ class LogLevel(IntEnum):
     file = 2
     string = 3
 
-# ---------- Settings ----------
+class Settings:
+    base_language: str = 'en'
+    override: bool = True # False
 
-base_language: str = 'en'
-override: bool = True # False
-log_level: LogLevel = LogLevel.string
+    files: list[str] = []
+    keys: list[str] = []
+    languages: list[str] = []
+
+    log_level: LogLevel = LogLevel.string
 
 os.system('clear')
 
@@ -61,42 +68,63 @@ for path in Path('.').rglob('*.lproj/*.strings'):
 print('Translating...')
 
 for file_group, languages in files.items():
-    base = languages.get('base') or languages.get(base_language)
+
+    if Settings.files and file_group.filename not in Settings.files:
+        continue
+
+    base = languages.get('base') or languages.get(Settings.base_language)
 
     if not base:
-        print(f'No base language for {file_group}')
+        print(f'\n[x] No base language for {file_group}')
         continue
 
     try:
         base.read()
     except UnicodeDecodeError:
-        print(f'Error reading base file {base.path}')
+        print(f'\n[x] Error reading base file "{base.path}"')
         continue
 
-    if log_level >= LogLevel.group:
-        print(f'Starting {file_group} with {len(base.strings)} strings')
+    if Settings.log_level >= LogLevel.group:
+        print(f'\nStarting {file_group} with {len(base.strings)} strings')
 
     for language, strings_file in languages.items():
-        translator = Translator(target_lang = language, origin_lang = base_language)    
+        if strings_file.path == base.path:
+            continue
+
+        if Settings.languages and language not in Settings.languages:
+            continue
+
+        translator = Translator(target_lang = language, origin_lang = Settings.base_language)    
         
         try:
             strings_file.read()
         except UnicodeDecodeError:
-            print(f'Error reading {strings_file.path}')
+            print(f'    [x] Error reading "{strings_file.path}"')
             continue
 
-        if log_level >= LogLevel.file:
-            print(f'    {file_group}.{language} {strings_file}')
+        if Settings.log_level >= LogLevel.file:
+            print(f'    {file_group}.{language}')
 
         for base_string in base.strings.values():
-            if override or not base_string.key in strings_file.strings:
-                new_string = String(
-                    key = base_string.key,
-                    value = translator.translate(base_string.value),
-                    comment = base_string.comment
-                )
-                strings_file.strings[base_string.key] = new_string
-                if log_level >= LogLevel.string:
-                    print(f'        {base_string.key} = {new_string.value}')
+            
+            if not Settings.override or base_string.key in strings_file.strings:
+                continue
+
+            if Settings.keys and base_string.key not in Settings.keys:
+                continue
+            
+            new_string = String(
+                key = base_string.key,
+                value = translator.translate(base_string.value),
+                comment = base_string.comment
+            )
+            
+            strings_file.strings[base_string.key] = new_string
+            
+            if Settings.log_level >= LogLevel.string:
+                print(f'        {base_string.key} = {new_string.value}')
         
-        strings_file.save()
+        try:
+            strings_file.save()
+        except UnicodeEncodeError:
+            print(f'        [x] Error saving "{strings_file.path}"')

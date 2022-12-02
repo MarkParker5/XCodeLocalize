@@ -18,7 +18,7 @@ class Translator:
         self.target_lang = target_lang    
 
     def translate(self, text: str) -> str:
-        mtranslate.translate(text, self.target_alias, self.origin_lang)
+        return mtranslate.translate(text, self.target_alias, self.origin_lang)
 
     @property
     def target_alias(self) -> str:

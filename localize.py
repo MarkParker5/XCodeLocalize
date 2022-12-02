@@ -5,6 +5,9 @@ from pathlib import Path
 
 import typer
 from rich import print
+from rich.progress import Progress
+from rich.table import Table
+from rich.console import Console
 
 from Strings import FileGroup, StringsFile, String
 from Translator import Translator
@@ -14,7 +17,11 @@ from Translator import Translator
 # DONE: find all .strings, .storyboard, .intentdefinition files via glob
 # DONE: get languages from project file ?
 
- # TODO: safe translate quoted strings
+# DONE: setttings from command line
+# DONE: progress and colors
+
+# TODO: readme
+# TODO: safe translate quoted strings
 # result = ''
 # if m := re.search(r'‘(.+?)’', value):
 #     quoted = f'‘{m.group(1)}’'
@@ -23,16 +30,12 @@ from Translator import Translator
 # else:
 #     result = translate(text = value, lang = lang)
 
-# DONE: setttings from command line
-# TODO: readme
-# TODO: progress and colors
-
 # ---------- Settings ----------
 
 class LogLevel(str, Enum):
-    info = 'info'
+    progress = 'progress'
+    errors = 'errors'
     group = 'group'
-    file = 'file'
     string = 'string'
     
     @property
@@ -56,15 +59,44 @@ class Settings:
 Languages = dict[str, StringsFile]
 SearchResult = dict[FileGroup, Languages]
 
-# ---------- Search for files ----------
+# ---------- Global ----------
+
+settings: Settings
+progress: Progress
+update_progress: callable
+
+# ---------- Logging ----------
+
+def error(text: str):
+    global settings
+    if settings.log_level >= LogLevel.errors:
+        print(f'[red bold]:warning: {text}')
+    
+def table(groups: SearchResult):
+    console = Console()
+    
+    table = Table('File', 'Languages', '')
+    for group, languages in groups.items():
+        table.add_row(group.filename, ', '.join(sorted([code for code in languages.keys()])), str(len(languages)))
+    
+    console.print(table)
+
+# ---------- Search files ----------
 
 def search_groups() -> SearchResult:
+    global settings, progress, update_progress
     files: SearchResult = {}
 
     for path in Path('.').rglob('*.lproj/*.strings'):
         directory = path.parent.parent
         language = path.parent.stem.lower()
         filename = path.stem
+        
+        if settings.files and filename not in settings.files:
+            continue
+        
+        if settings.languages and language not in [*settings.languages, settings.base_language, 'base']:
+            continue
         
         file_group = FileGroup(str(directory), str(filename))
         
@@ -77,36 +109,37 @@ def search_groups() -> SearchResult:
 
 # ---------- Translate files ----------
 
-def translate_groups(groups: SearchResult, settings: Settings):
+def translate_groups(groups: SearchResult):
+    global settings, progress, update_progress
+    
     for file_group, languages in groups.items():
-        
-        if settings.files and file_group.filename not in settings.files:
-            continue
 
         base = languages.get('base') or languages.get(settings.base_language)
 
         if not base:
-            print(f'\n[x] No base language for {file_group}')
+            error(f'No base language for {file_group}')
+            update_progress(len(languages))
             continue
 
         try:
             base.read()
         except UnicodeDecodeError:
-            print(f'\n[x] Error reading base file "{base.path}"')
+            error(f'Error reading base file "{base.path}"')
+            update_progress(len(languages))
             continue
 
         if settings.log_level >= LogLevel.group:
-            print(f'\nStarting {file_group} with {len(base.strings)} strings')
+            print(f'\n:information:Translating "{file_group}" with {len(base.strings)} strings for {len(languages)} languages')
             
-        translate_languages(languages, base = base, settings = settings)
+        translate_languages(languages, base)
 
-def translate_languages(languages: Languages, base: StringsFile, settings: Settings):
+def translate_languages(languages: Languages, base: StringsFile):
+    global settings, progress, update_progress
+    
     for language_code, strings_file in languages.items():
         
         if strings_file.path == base.path:
-            continue
-
-        if settings.languages and language_code not in settings.languages:
+            update_progress()
             continue
 
         translator = Translator(target_lang = language_code, origin_lang = settings.base_language)    
@@ -114,23 +147,29 @@ def translate_languages(languages: Languages, base: StringsFile, settings: Setti
         try:
             strings_file.read()
         except UnicodeDecodeError:
-            print(f'    [x] Error reading "{strings_file.path}"')
-            continue
-
-        if settings.log_level >= LogLevel.file:
-            print(f'    {base.path.stem}.{language_code}')
-            
-        translate_strings(strings_file, base = base, translator = translator, settings = settings)
-        
-def translate_strings(strings_file: StringsFile, base: StringsFile, translator: Translator, settings: Settings):
-    for base_string in base.strings.values():
-            
-        if not settings.override and base_string.key in strings_file.strings:
-            continue
-
-        if settings.keys and base_string.key not in settings.keys:
+            error(f'Error reading "{strings_file.path}"')
+            update_progress()
             continue
         
+        translate_strings(strings_file, base, translator)
+        update_progress()
+        
+def translate_strings(strings_file: StringsFile, base: StringsFile, translator: Translator):
+    global settings, progress
+    
+    filtered_base = [
+        string for string in base.strings.values()
+        if (not settings.keys or string.key in settings.keys) and
+        (settings.override or not string.key in strings_file.strings)
+    ]
+    
+    current_file_task = progress.add_task(
+        f'{strings_file.path.stem} -> {translator.target_lang}', 
+        total = len(filtered_base)
+    )
+    
+    for base_string in filtered_base:
+                    
         new_string = String(
             key = base_string.key,
             value = translator.translate(base_string.value),
@@ -140,19 +179,30 @@ def translate_strings(strings_file: StringsFile, base: StringsFile, translator: 
         strings_file.strings[base_string.key] = new_string
         
         if settings.log_level >= LogLevel.string:
-            print(f'        {base_string.key} = {new_string.value}')
+            print(f'\t{base_string.key} = {new_string.value}')
+            
+        progress.advance(current_file_task)
     
     try:
         strings_file.save()
     except UnicodeEncodeError:
-        print(f'        [x] Error saving "{strings_file.path}"')
+        error(f'Error saving "{strings_file.path}"')
+        
+    progress.remove_task(current_file_task)
         
 # ---------- Main ----------
 
-def search_and_translate(settings: Settings):
-    os.system('clear')
+def search_and_translate():
+    global progress, update_progress, console
+    
     groups = search_groups()
-    translate_groups(groups, settings = settings)
+    table(groups)
+    
+    with Progress() as p:
+        progress = p
+        files_task = progress.add_task('Total progress', total = len([file for langs in groups.values() for file in langs]))
+        update_progress = lambda count = 1: progress.advance(files_task, count)
+        translate_groups(groups)
 
 def main(
     base_language: str = 'en',
@@ -160,10 +210,10 @@ def main(
     file: list[str] = None, # all
     key: list[str] = None, # all
     language: list[str] = None, # all
-    log_level: LogLevel = LogLevel.file):
+    log_level: LogLevel = LogLevel.group):
     
-    search_and_translate(
-        Settings(
+    global settings
+    settings = Settings(
             base_language = base_language,
             override = override,
             files = file,
@@ -171,8 +221,8 @@ def main(
             languages = language,
             log_level = log_level
         )
-    )
-
+    
+    search_and_translate()
 
 # ---------- Run ----------
 

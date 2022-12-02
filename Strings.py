@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 import re
 
 
@@ -29,11 +30,11 @@ class String:
 
 class StringsFile:
 
-    path: str
+    path: Path
     strings: dict[str, String] = {}
     is_readed: bool = False
 
-    def __init__(self, path: str):
+    def __init__(self, path: Path):
         self.path = path
 
     def __repr__(self):
@@ -46,19 +47,19 @@ class StringsFile:
         with open(self.path, 'r') as f:
             file = f.read().replace('%@', '_ARG_')
 
-            pattern = re.compile(r'(?P<comment>\/\*[\s\S]*?\*\/)?[\s|S]+"(?P<key>[^"]+)"\s?=\s?"(?P<value>[^"]+)";')
+            pattern = re.compile(r'(\/\*(?P<comment>[\s\S]*?)\*\/)?[\s]+"(?P<key>[^"]+)"\s?=\s?"(?P<value>[^"]+)";')
 
             for match in pattern.finditer(file):
                 groups = match.groupdict()
-                
+
                 if not all([groups.get('value'), groups.get('key')]):
                     continue
 
                 key = groups['key']
                 value = groups['value']
-                comment = groups.get('comment') or ''    
-                    
-                self.strings[key] = String(key, value, comment)
+                comment = groups.get('comment') or ''
+
+                self.strings[key] = String(key, value, comment.strip())
 
     def save(self):
         with open(self.path, 'w') as f:

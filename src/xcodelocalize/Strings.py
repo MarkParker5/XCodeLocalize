@@ -1,3 +1,4 @@
+from typing import Optional
 from dataclasses import dataclass
 from pathlib import Path
 import re
@@ -25,19 +26,20 @@ class FileGroup:
 class String:
     key: str
     value: str
-    comment: str | None = None
+    comment: Optional[str] = None
 
 class StringsFile:
 
     path: Path
-    strings: dict[str, String] = {}
-    is_readed: bool = False
+    strings: dict[str, String]
+    is_read: bool = False
 
     def __init__(self, path: Path):
         self.path = path
+        self.strings = {}
 
     def __repr__(self):
-        if self.is_readed:
+        if self.is_read:
             return f'<StringsFile with {len(self.strings)} strings>'
         else:
             return f'<StringsFile []>'
@@ -59,12 +61,14 @@ class StringsFile:
                 comment = groups.get('comment') or ''
 
                 self.strings[key] = String(key, value, comment.strip())
+                self.is_read = True
 
     def save(self):
         with open(self.path, 'w') as f:
             for string in self.strings.values():
+                comment = f'/* {string.comment} */\n' if string.comment else ''
                 f.write(
-                    f'\n/* {string.comment} */\n"{string.key}" = "{string.value}";\n' \
+                    f'\n{comment}"{string.key}" = "{string.value}";\n' \
                         .replace('_ARG_', '%@') \
                         .replace('$ {','${')
                 )

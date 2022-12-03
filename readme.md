@@ -1,6 +1,6 @@
 # XCodeLocalize
 
-# Requirments 
+## Requirments 
 
 Python3.9+
 
@@ -12,6 +12,14 @@ pip3 install xcodelocalize
 ```
 
 ## Usage
+
+### Prepare a project
+
+Go to the project settings, add the desired localization languages. Create localization files for all selected languages.
+
+### Localize
+
+`cd` to project root folder and run
 
 ```
 xcodelocalize [OPTIONS]
@@ -42,8 +50,6 @@ xcodelocalize --file Info --file MainStoryboard --file Localizable
 * `--log-level`: One from [progress|errors|group|string].  _[default: group]_
 
 * `--help`: Show info
-
----
 
 ## Features:
 

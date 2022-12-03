@@ -1,3 +1,4 @@
+from typing import Optional
 from enum import Enum
 from dataclasses import dataclass
 
@@ -22,9 +23,9 @@ class Settings:
     base_language: str = 'en'
     override: bool = False
 
-    files: list[str] | None = None # all
-    keys: list[str] | None = None # all
-    languages: list[str] | None = None # all
+    files: Optional[list[str]] = None # all
+    keys: Optional[list[str]] = None # all
+    languages: Optional[list[str]] = None # all
 
     log_level: LogLevel = LogLevel.string
 

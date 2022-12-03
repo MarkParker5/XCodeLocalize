@@ -7,9 +7,9 @@ from rich.progress import Progress
 from rich.table import Table
 from rich.console import Console
 
-from Strings import FileGroup, StringsFile, String
-from Translator import Translator
-from Settings import Settings, LogLevel, SearchResult, Languages
+from .Strings import FileGroup, StringsFile, String
+from .Translator import Translator
+from .Settings import Settings, LogLevel, SearchResult, Languages
 
 
 # ---------- Global ----------
@@ -179,5 +179,8 @@ def main(
 
 # ---------- Run ----------
 
-if __name__ == '__main__':
+def run():
     typer.run(main)
+
+if __name__ == '__main__':
+    run()

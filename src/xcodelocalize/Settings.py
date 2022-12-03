@@ -1,7 +1,7 @@
 from enum import Enum
 from dataclasses import dataclass
 
-from Strings import FileGroup, StringsFile
+from .Strings import FileGroup, StringsFile
 
 
 class LogLevel(str, Enum):

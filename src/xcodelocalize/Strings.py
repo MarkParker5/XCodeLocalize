@@ -65,7 +65,7 @@ class StringsFile:
 
     def save(self):
         with open(self.path, 'w') as f:
-            for string in self.strings.values():
+            for string in sorted(self.strings.values(), key = lambda s: s.key):
                 comment = f'/* {string.comment} */\n' if string.comment else ''
                 f.write(
                     f'\n{comment}"{string.key}" = "{string.value}";\n' \

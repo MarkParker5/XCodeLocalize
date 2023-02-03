@@ -67,8 +67,9 @@ class StringsFile:
         with open(self.path, 'w') as f:
             for string in sorted(self.strings.values(), key = lambda s: s.key):
                 comment = f'/* {string.comment} */\n' if string.comment else ''
+                value = string.value.replace('"', '”')
                 f.write(
-                    f'\n{comment}"{string.key}" = "{string.value}";\n' \
+                    f'\n{comment}"{string.key}" = "{value}";\n' \
                         .replace('_ARG_', '%@') \
                         .replace('$ {','${')
                 )

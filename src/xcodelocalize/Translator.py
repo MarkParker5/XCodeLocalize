@@ -7,7 +7,8 @@ class Translator:
     xcode_aliases = {
         'zh-Hans': 'zh-CN', 
         'zh-Hant': 'zh-TW', 
-        'pt-BR': 'pt'
+        'pt-BR': 'pt',
+        'he': 'iw'
     }
 
     origin_lang: str = 'en'

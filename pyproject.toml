@@ -7,7 +7,7 @@ license = "MIT"
 readme = "README.md"
 homepage = "https://pypi.org/project/xcodelocalize/"
 repository = "https://github.com/MarkParker5/XCodeLocalize"
-documentation = "https://github.com/MarkParker5/XCodeLocalize/blob/main/readme.md"
+documentation = "https://github.com/MarkParker5/XCodeLocalize/blob/main/README.md"
 keywords = ["xcode", "localize", "strings", "localization", "ios"]
 
 [tool.poetry.scripts]

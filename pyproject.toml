@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "xcodelocalize"
-version = "1.0.1"
+version = "1.0.2"
 description = "Tool for automatic search and localization of .strings files"
 authors = ["MarkParker5 <markparker.it@gmail.com>"]
 license = "MIT"

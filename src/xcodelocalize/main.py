@@ -78,6 +78,12 @@ def translate_groups(groups: SearchResult):
         except UnicodeDecodeError:
             error(f'Error reading base file "{base.path}"')
             continue
+        
+        if settings.format_base:
+            try:
+                base.save()
+            except UnicodeEncodeError:
+                error(f'Error saving "{base.path}"')
 
         if settings.log_level >= LogLevel.group:
             print(f'\n:information: Translating "{file_group}" with {len(base.strings)} strings for {len(languages)} languages')
@@ -167,15 +173,17 @@ def search_and_translate():
 def main(
     base_language: str = 'en',
     override: bool = False,
-    file: list[str] = None, # all
-    key: list[str] = None, # all
-    language: list[str] = None, # all
+    format_base: bool = False,
+    file: list[str] = None,
+    key: list[str] = None,
+    language: list[str] = None,
     log_level: LogLevel = LogLevel.group):
     
     global settings
     settings = Settings(
             base_language = base_language,
             override = override,
+            format_base = format_base,
             files = file,
             keys = key,
             languages = language,

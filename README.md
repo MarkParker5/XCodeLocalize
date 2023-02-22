@@ -53,6 +53,8 @@ python3 -m xcodelocalize [OPTIONS]
 
 * `--override / --no-override`: a boolean value that indicates whether strings that already exist in the file will be translated. Retranslate if `override`, skip if `no-override`. _[default: no-override]_
 
+* `--format-base / --no-format-base`: sort base file strings by key. _[default: no-format-base]_
+
 * `--file`: Names of the strings files to be translated. Multiple files can be specified. If not specified, all files will be translated. _[default: None]_ 
     
     Example:
@@ -78,8 +80,6 @@ python3 -m xcodelocalize [OPTIONS]
 * Formated strings with %@ are supported.
 
 * Multiline strings are supported.
-
-* Key and value must **not contain double quotes `"`**. Other quotes are supported.
 
 * Comments are supported and will be copied to all files. Comments must **not contain substrings in localizable strings format with comment, such as `/*[comment]*/ "[key]" = "[value]";`**.
 

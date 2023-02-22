@@ -22,6 +22,7 @@ class LogLevel(str, Enum):
 class Settings:
     base_language: str = 'en'
     override: bool = False
+    format_base: bool = False
 
     files: Optional[list[str]] = None # all
     keys: Optional[list[str]] = None # all

@@ -48,7 +48,7 @@ class StringsFile:
         with open(self.path, 'r') as f:
             file = f.read().replace('%@', '_ARG_')
 
-            pattern = re.compile(r'(\/\*(?P<comment>[\s\S]*?)\*\/)?[\s]+"(?P<key>[^"]+)"\s?=\s?"(?P<value>[^"]+)";')
+            pattern = re.compile(r'(\/\*(?P<comment>[\s\S]*?)\*\/)?[\s]*"(?P<key>[^"]+)"\s?=\s?"(?P<value>[^"]+)";')
 
             for match in pattern.finditer(file):
                 groups = match.groupdict()
